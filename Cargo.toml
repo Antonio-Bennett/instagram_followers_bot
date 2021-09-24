@@ -1,0 +1,8 @@
+[package]
+name = "instagram_followers_bot"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+thirtyfour = "0.27.0"
+tokio = "1.12.0"
