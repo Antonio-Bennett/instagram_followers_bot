@@ -60,6 +60,9 @@ async fn main() -> WebDriverResult<()> {
     let following_amount = following_amount.inner_html().await?;
     let following_amount = following_amount.parse::<usize>().unwrap();
 
+    let mut followers: HashSet<String> = HashSet::new();
+    let mut following: HashSet<String> = HashSet::new();
+
     let followers_menu = driver
         .query(By::Css(
             "#react-root > section > main > div > header > section > ul > li:nth-child(2) > a",
@@ -90,9 +93,6 @@ async fn main() -> WebDriverResult<()> {
         sleep(Duration::from_secs(2));
     }
 
-    let mut followers: HashSet<String> = HashSet::new();
-    let mut following: HashSet<String> = HashSet::new();
-
     for follower in followers_list_elems {
         let name = follower
             .query(By::Css(
@@ -104,12 +104,61 @@ async fn main() -> WebDriverResult<()> {
         followers.insert(name);
     }
 
-    dbg!(&followers);
-    println!("{}", followers.len());
+    let close_list = driver.query(By::Css("body > div.RnEpo.Yx5HN > div > div > div:nth-child(1) > div > div:nth-child(3) > button")).first().await?;
+    close_list.click().await?;
 
-    // println!("{:?}", followers_list.len());
+    let following_menu = driver
+        .query(By::Css(
+            "#react-root > section > main > div > header > section > ul > li:nth-child(3) > a",
+        ))
+        .first()
+        .await?;
+    following_menu.click().await?;
 
-    sleep(Duration::from_secs(5));
+    let following_list = driver
+        .query(By::Css(
+            "body > div.RnEpo.Yx5HN > div > div > div.isgrP > ul > div",
+        ))
+        .first()
+        .await?;
+
+    let mut following_list_elems = following_list.find_elements(By::Css("li")).await?;
+
+    while following_list_elems.len() < following_amount {
+        let last_li = following_list
+            .query(By::Css("li:last-child"))
+            .first()
+            .await?;
+
+        last_li.scroll_into_view().await?;
+
+        following_list_elems = following_list.find_elements(By::Css("li")).await?;
+
+        sleep(Duration::from_secs(2));
+    }
+
+    for following_ in following_list_elems {
+        let name = following_
+            .query(By::Css(
+                "div > div.t2ksc > div.enpQJ > div.d7ByH > span > a",
+            ))
+            .first()
+            .await?;
+        let name = name.inner_html().await?;
+        following.insert(name);
+    }
+
+    let close_list = driver.query(By::Css("body > div.RnEpo.Yx5HN > div > div > div:nth-child(1) > div > div:nth-child(3) > button")).first().await?;
+    close_list.click().await?;
+
+    let diff = following.symmetric_difference(&followers);
+    if followers_amount > following_amount {
+        println!("Accounts you might not be following back");
+        dbg!(&diff);
+    } else {
+        println!("Accounts that might not be following you back");
+        dbg!(&diff);
+    }
 
     driver.quit().await?;
 
